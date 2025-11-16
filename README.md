@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 ## OUTPUT
-
+![alt text](exp4.png)
 
 # RESULT:
 The programs are executed successfully.
