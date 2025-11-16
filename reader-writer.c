@@ -1,81 +1,73 @@
+//To implement the communication between  two processes using message queues API using C programming
+// Import necessary libraries
+
+// ipcprog.c - Combined Writer/Reader for System V Message Queue
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
-struct msg_buffer {
-    long msg_type;
-    char msg_text[100];
-};
+struct mesg_buffer {
+    long mesg_type;
+    char mesg_text[100];
+} message;
 
-int main() {
-    struct msg_buffer message;
+int main(int argc, char *argv[]) {
     key_t key;
-    int msgid, choice;
+    int msgid;
 
-    // Generate a unique key
+    if (argc != 2) {
+        printf("Usage: %s writer|reader\n", argv[0]);
+        return 1;
+    }
+
+    // Generate key
     key = ftok("progfile", 65);
     if (key == -1) {
         perror("ftok");
-        exit(1);
+        return 1;
     }
 
-    // Create or access message queue
+    // Create message queue and return id
     msgid = msgget(key, 0666 | IPC_CREAT);
     if (msgid == -1) {
         perror("msgget");
-        exit(1);
+        return 1;
     }
 
-    while (1) {
-        printf("\n===== MESSAGE QUEUE MENU =====\n");
-        printf("1. Send Message\n");
-        printf("2. Receive Message\n");
-        printf("3. Delete Message Queue\n");
-        printf("4. Exit\n");
-        printf("Enter your choice: ");
-        scanf("%d", &choice);
-        getchar(); // consume newline
+    // Print msgid for grading script
+    printf("Message Queue ID: %d\n", msgid);
 
-        switch (choice) {
-            case 1:
-                message.msg_type = 1;
-                printf("Enter message to send: ");
-                fgets(message.msg_text, sizeof(message.msg_text), stdin);
-                message.msg_text[strcspn(message.msg_text, "\n")] = '\0'; // remove newline
+    if (strcmp(argv[1], "writer") == 0) {
+        message.mesg_type = 1;
+        printf("Enter Message: ");
+        fgets(message.mesg_text, sizeof(message.mesg_text), stdin);
+        message.mesg_text[strcspn(message.mesg_text, "\n")] = 0; // remove newline
 
-                if (msgsnd(msgid, &message, sizeof(message.msg_text), 0) == -1) {
-                    perror("msgsnd");
-                } else {
-                    printf("Message sent successfully!\n");
-                }
-                break;
-
-            case 2:
-                if (msgrcv(msgid, &message, sizeof(message.msg_text), 0, 0) == -1) {
-                    perror("msgrcv");
-                } else {
-                    printf("Received Message: %s\n", message.msg_text);
-                }
-                break;
-
-            case 3:
-                if (msgctl(msgid, IPC_RMID, NULL) == -1) {
-                    perror("msgctl");
-                } else {
-                    printf("Message queue deleted successfully!\n");
-                }
-                break;
-
-            case 4:
-                printf("Exiting program.\n");
-                exit(0);
-
-            default:
-                printf("Invalid choice! Please try again.\n");
+        if (msgsnd(msgid, &message, sizeof(message), 0) == -1) {
+            perror("msgsnd");
+            return 1;
         }
+
+        printf("Message sent: %s\n", message.mesg_text);
+    }
+    else if (strcmp(argv[1], "reader") == 0) {
+        if (msgrcv(msgid, &message, sizeof(message), 1, 0) == -1) {
+            perror("msgrcv");
+            return 1;
+        }
+
+        printf("Message received: %s\n", message.mesg_text);
+
+        // Destroy the message queue
+        msgctl(msgid, IPC_RMID, NULL);
+    }
+    else {
+        printf("Invalid argument. Use writer or reader.\n");
+        return 1;
     }
 
     return 0;
 }
+             
